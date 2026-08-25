@@ -1,0 +1,194 @@
+# =============================================================================
+# Messanger AX — Git ignore
+# Prevents build artifacts, IDE junk, secrets, and generated files from GitHub.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# OS / editor junk
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+*~
+*.swp
+*.swo
+*.bak
+*.tmp
+*.temp
+.history
+.atom/
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# -----------------------------------------------------------------------------
+# IDE / tooling
+# -----------------------------------------------------------------------------
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# Keep shared VS Code / Cursor launch configs; ignore personal overrides
+.vscode/*
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+
+# -----------------------------------------------------------------------------
+# Flutter / Dart
+# -----------------------------------------------------------------------------
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+.pub-preload-cache/
+build/
+/coverage/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+
+# Symbolication / obfuscation outputs
+app.*.symbols
+app.*.map.json
+
+# FVM (Flutter Version Management)
+.fvm/
+.fvmrc
+
+# -----------------------------------------------------------------------------
+# Android
+# -----------------------------------------------------------------------------
+**/android/.gradle/
+**/android/captures/
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/**/GeneratedPluginRegistrant.kt
+**/android/.cxx/
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/android/key.properties
+**/*.keystore
+**/*.jks
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# -----------------------------------------------------------------------------
+# iOS
+# -----------------------------------------------------------------------------
+**/ios/**/*.mode1v3
+**/ios/**/*.mode2v3
+**/ios/**/*.moved-aside
+**/ios/**/*.pbxuser
+**/ios/**/*.perspectivev3
+**/ios/**/*sync/
+**/ios/**/.sconsign.dblite
+**/ios/**/.tags*
+**/ios/**/.vagrant/
+**/ios/**/DerivedData/
+**/ios/**/Icon?
+**/ios/**/Pods/
+**/ios/**/.symlinks/
+**/ios/**/profile
+**/ios/**/xcuserdata/
+**/ios/**/.generated/
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/flutter_lldbinit
+**/ios/Flutter/flutter_lldb_helper.py
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+
+# Exceptions for default Xcode user files
+!**/ios/**/default.mode1v3
+!**/ios/**/default.mode2v3
+!**/ios/**/default.pbxuser
+!**/ios/**/default.perspectivev3
+
+# -----------------------------------------------------------------------------
+# macOS
+# -----------------------------------------------------------------------------
+**/macos/**/Flutter/ephemeral/
+**/macos/Flutter/ephemeral/
+**/macos/**/Pods/
+**/macos/**/xcuserdata/
+
+# -----------------------------------------------------------------------------
+# Linux / Windows ephemeral build folders
+# -----------------------------------------------------------------------------
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
+
+# -----------------------------------------------------------------------------
+# Secrets / local env (never push)
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.mobileprovision
+**/secrets/
+**/credentials/
+**/service-account*.json
+google-services.json
+GoogleService-Info.plist
+**/android/app/google-services.json
+**/ios/Runner/GoogleService-Info.plist
+
+# -----------------------------------------------------------------------------
+# Logs / dumps / misc
+# -----------------------------------------------------------------------------
+*.log
+*.pyc
+logs/
+*.hprof
+*.stackdump
+*.dmp
+
+# -----------------------------------------------------------------------------
+# Test / coverage extras
+# -----------------------------------------------------------------------------
+.test_coverage/
+coverage_badge.svg
+.nyc_output/
+
+# -----------------------------------------------------------------------------
+# Node (if tooling scripts are added later)
+# -----------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# -----------------------------------------------------------------------------
+# Local AI / agent caches
+# -----------------------------------------------------------------------------
+.cursor/
+.claude/
