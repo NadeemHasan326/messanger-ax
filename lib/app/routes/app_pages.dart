@@ -51,6 +51,16 @@ class AppPages {
       binding: CreateGroupBinding(),
     ),
     _page(
+      name: AppRoutes.createChannel,
+      page: CreateChannelPage.new,
+      binding: CreateChannelBinding(),
+    ),
+    _page(
+      name: AppRoutes.channels,
+      page: ChannelsPage.new,
+      binding: ChannelsBinding(),
+    ),
+    _page(
       name: AppRoutes.addStory,
       page: AddStoryPage.new,
       binding: AddStoryBinding(),
@@ -65,6 +75,11 @@ class AppPages {
       name: AppRoutes.userProfile,
       page: UserProfilePage.new,
       binding: UserProfileBinding(),
+    ),
+    _page(
+      name: AppRoutes.channelInfo,
+      page: ChannelInfoPage.new,
+      binding: ChannelInfoBinding(),
     ),
     _page(
       name: AppRoutes.chat,

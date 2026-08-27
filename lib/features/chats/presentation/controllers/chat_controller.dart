@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:messanger_ax/exports.dart';
+import 'package:messanger_ax/features/chats/data/mock_channel_posts.dart';
 import 'package:messanger_ax/features/chats/data/mock_chat_messages.dart';
 
 class ChatController extends GetxController {
@@ -14,6 +15,11 @@ class ChatController extends GetxController {
   final canSend = false.obs;
   final showEmojiPicker = false.obs;
   final isMuted = false.obs;
+  final isChatLocked = false.obs;
+  final isSearching = false.obs;
+  final searchQuery = ''.obs;
+  final searchController = TextEditingController();
+  final isContactSaved = false.obs;
   final members = <String>[].obs;
   final pendingMemberNames = <String>[].obs;
   final admins = <String>['You'].obs;
@@ -38,6 +44,26 @@ class ChatController extends GetxController {
           ? Get.find<ProfileController>()
           : null;
 
+  ChatsController? get _chats =>
+      Get.isRegistered<ChatsController>() ? Get.find<ChatsController>() : null;
+
+  ChatChannel? get channel {
+    final chats = _chats;
+    if (chats == null) return null;
+    chats.channels.length;
+    return chats.channelByName(thread.name);
+  }
+
+  bool get isJoinedChannel => channel?.isJoined ?? false;
+
+  bool get showComposer {
+    if (thread.isChannel) return thread.isChannelAdmin;
+    return true;
+  }
+
+  String get composerHint =>
+      thread.isChannel ? 'Post an update...' : 'Message...';
+
   bool get repliesEnabled => _profile?.replyAllowed.value ?? true;
 
   ChatWallpaper get wallpaper =>
@@ -55,24 +81,59 @@ class ChatController extends GetxController {
   int get selectedCount => selectedIds.length;
 
   String get headerSubtitle {
+    if (thread.isChannel) {
+      return channel?.followersLabel ??
+          '${thread.followerCount} followers';
+    }
     if (thread.isGroup) return '${members.length} members';
     return thread.online ? 'Online' : 'Offline';
   }
 
   List<String> get banners {
+    final joined = isJoinedChannel;
+    final onlyAdmins = onlyAdminsCanSend.value;
+    final duration = _profile?.disappearingDuration.value;
     final items = <String>[];
-    if (thread.isGroup && onlyAdminsCanSend.value) {
+    if (thread.isChannel && !thread.isChannelAdmin) {
+      items.add(
+        joined
+            ? 'Only channel admins can post'
+            : 'Follow to see new posts in Chats',
+      );
+    }
+    if (thread.isGroup && onlyAdmins) {
       items.add('Only admins can send messages');
     }
-    final duration = _profile?.disappearingDuration.value;
-    if (duration != null && duration != DisappearingDuration.off) {
+    if (!thread.isChannel &&
+        duration != null &&
+        duration != DisappearingDuration.off) {
       items.add('Messages disappear after ${duration.label}');
     }
     return items;
   }
 
   ChatMessage reversedMessage(int index) =>
-      messages[messages.length - 1 - index];
+      visibleMessages[visibleMessages.length - 1 - index];
+
+  List<ChatMessage> get visibleMessages {
+    final q = searchQuery.value.trim().toLowerCase();
+    final all = messages.toList();
+    if (!isSearching.value || q.isEmpty) return all;
+    return all
+        .where(
+          (message) =>
+              !message.isDeleted && message.text.toLowerCase().contains(q),
+        )
+        .toList();
+  }
+
+  List<ChatMessage> get mediaMessages => messages
+      .where(
+        (message) =>
+            message.isAttachment ||
+            message.text.toLowerCase().contains('http'),
+      )
+      .toList();
 
   bool isMessageSelected(String id) => selectedIds.contains(id);
 
@@ -88,27 +149,203 @@ class ChatController extends GetxController {
   }
 
   List<ChatOverflowItem> get overflowItems {
-    final muteLabel = isMuted.value ? 'Unmute' : 'Mute';
+    final muteLabel =
+        isMuted.value ? 'Unmute notifications' : 'Mute notifications';
+    if (thread.isChannel) {
+      return [
+        const ChatOverflowItem(
+          ChatMenuAction.channelInfo,
+          'View info',
+          Icons.campaign_outlined,
+        ),
+        const ChatOverflowItem(
+          ChatMenuAction.search,
+          'Search',
+          Icons.search_rounded,
+        ),
+        const ChatOverflowItem(
+          ChatMenuAction.mediaLinksDocs,
+          'Media, links, and docs',
+          Icons.photo_library_outlined,
+        ),
+        ChatOverflowItem(ChatMenuAction.mute, muteLabel, Icons.notifications_off_outlined),
+        const ChatOverflowItem(
+          ChatMenuAction.wallpaper,
+          'Chat theme',
+          Icons.palette_outlined,
+        ),
+        const ChatOverflowItem(ChatMenuAction.more, 'More', Icons.more_horiz_rounded),
+      ];
+    }
     if (thread.isGroup) {
       return [
-        const ChatOverflowItem(ChatMenuAction.viewMembers, 'View members'),
-        const ChatOverflowItem(ChatMenuAction.sendPermission, 'Who can send'),
-        const ChatOverflowItem(ChatMenuAction.wallpaper, 'Wallpaper'),
-        ChatOverflowItem(ChatMenuAction.mute, muteLabel),
-        const ChatOverflowItem(ChatMenuAction.clearChat, 'Clear chat'),
+        const ChatOverflowItem(
+          ChatMenuAction.viewMembers,
+          'Group info',
+          Icons.groups_outlined,
+        ),
+        const ChatOverflowItem(
+          ChatMenuAction.search,
+          'Search',
+          Icons.search_rounded,
+        ),
+        const ChatOverflowItem(
+          ChatMenuAction.mediaLinksDocs,
+          'Media, links, and docs',
+          Icons.photo_library_outlined,
+        ),
+        ChatOverflowItem(ChatMenuAction.mute, muteLabel, Icons.notifications_off_outlined),
+        const ChatOverflowItem(
+          ChatMenuAction.disappearing,
+          'Disappearing messages',
+          Icons.timer_outlined,
+        ),
+        const ChatOverflowItem(
+          ChatMenuAction.wallpaper,
+          'Chat theme',
+          Icons.palette_outlined,
+        ),
+        const ChatOverflowItem(ChatMenuAction.more, 'More', Icons.more_horiz_rounded),
       ];
     }
     return [
-      const ChatOverflowItem(ChatMenuAction.viewProfile, 'View profile'),
-      const ChatOverflowItem(ChatMenuAction.wallpaper, 'Wallpaper'),
-      ChatOverflowItem(ChatMenuAction.mute, muteLabel),
-      const ChatOverflowItem(ChatMenuAction.clearChat, 'Clear chat'),
-      const ChatOverflowItem(ChatMenuAction.block, 'Block'),
+      if (!isContactSaved.value)
+        const ChatOverflowItem(
+          ChatMenuAction.addToContacts,
+          'Add to contacts',
+          Icons.person_add_alt_1_outlined,
+        ),
+      const ChatOverflowItem(
+        ChatMenuAction.search,
+        'Search',
+        Icons.search_rounded,
+      ),
+      const ChatOverflowItem(
+        ChatMenuAction.mediaLinksDocs,
+        'Media, links, and docs',
+        Icons.photo_library_outlined,
+      ),
+      ChatOverflowItem(
+        ChatMenuAction.chatLock,
+        isChatLocked.value ? 'Unlock chat' : 'Chat Lock',
+        Icons.lock_outline_rounded,
+      ),
+      const ChatOverflowItem(
+        ChatMenuAction.hideChat,
+        'Hide Chat 🔒',
+        Icons.visibility_off_outlined,
+      ),
+      ChatOverflowItem(ChatMenuAction.mute, muteLabel, Icons.notifications_off_outlined),
+      const ChatOverflowItem(
+        ChatMenuAction.disappearing,
+        'Disappearing messages',
+        Icons.timer_outlined,
+      ),
+      const ChatOverflowItem(
+        ChatMenuAction.wallpaper,
+        'Chat theme',
+        Icons.palette_outlined,
+      ),
+      const ChatOverflowItem(ChatMenuAction.more, 'More', Icons.more_horiz_rounded),
+    ];
+  }
+
+  List<ChatOverflowItem> get moreItems {
+    if (thread.isChannel) {
+      return [
+        const ChatOverflowItem(
+          ChatMenuAction.report,
+          'Report',
+          Icons.error_outline_rounded,
+        ),
+        if (isJoinedChannel && !thread.isChannelAdmin)
+          const ChatOverflowItem(
+            ChatMenuAction.unfollow,
+            'Unfollow',
+            Icons.person_remove_alt_1_outlined,
+          ),
+        const ChatOverflowItem(
+          ChatMenuAction.clearChat,
+          'Clear chat',
+          Icons.delete_outline_rounded,
+        ),
+      ];
+    }
+    if (thread.isGroup) {
+      return [
+        const ChatOverflowItem(
+          ChatMenuAction.report,
+          'Report',
+          Icons.error_outline_rounded,
+        ),
+        const ChatOverflowItem(
+          ChatMenuAction.clearChat,
+          'Clear chat',
+          Icons.delete_outline_rounded,
+        ),
+        const ChatOverflowItem(
+          ChatMenuAction.exportChat,
+          'Export chat',
+          Icons.swap_vert_rounded,
+        ),
+        const ChatOverflowItem(
+          ChatMenuAction.addShortcut,
+          'Add shortcut',
+          Icons.reply_rounded,
+        ),
+        const ChatOverflowItem(
+          ChatMenuAction.sendPermission,
+          'Who can send',
+          Icons.admin_panel_settings_outlined,
+        ),
+        const ChatOverflowItem(
+          ChatMenuAction.addMembers,
+          'Add members',
+          Icons.person_add_alt_1_outlined,
+        ),
+      ];
+    }
+    return const [
+      ChatOverflowItem(
+        ChatMenuAction.report,
+        'Report',
+        Icons.error_outline_rounded,
+      ),
+      ChatOverflowItem(
+        ChatMenuAction.block,
+        'Block',
+        Icons.block_rounded,
+      ),
+      ChatOverflowItem(
+        ChatMenuAction.clearChat,
+        'Clear chat',
+        Icons.delete_outline_rounded,
+      ),
+      ChatOverflowItem(
+        ChatMenuAction.exportChat,
+        'Export chat',
+        Icons.swap_vert_rounded,
+      ),
+      ChatOverflowItem(
+        ChatMenuAction.addShortcut,
+        'Add shortcut',
+        Icons.shortcut,
+      ),
+      ChatOverflowItem(
+        ChatMenuAction.addToList,
+        'Add to list',
+        Icons.account_balance_wallet_outlined,
+      ),
     ];
   }
 
   void onPopInvoked(bool didPop) {
-    if (!didPop) clearSelection();
+    if (didPop) return;
+    if (isSearching.value) {
+      endSearch();
+      return;
+    }
+    clearSelection();
   }
 
   void startCall() {
@@ -142,7 +379,30 @@ class ChatController extends GetxController {
         return action;
       case ChatMenuAction.sendPermission:
       case ChatMenuAction.viewMembers:
+      case ChatMenuAction.mediaLinksDocs:
+      case ChatMenuAction.more:
+      case ChatMenuAction.addToList:
         return action;
+      case ChatMenuAction.channelInfo:
+        openChannelInfo();
+      case ChatMenuAction.unfollow:
+        confirmUnfollow();
+      case ChatMenuAction.addToContacts:
+        addToContacts();
+      case ChatMenuAction.search:
+        beginSearch();
+      case ChatMenuAction.chatLock:
+        toggleChatLock();
+      case ChatMenuAction.hideChat:
+        confirmHideChat();
+      case ChatMenuAction.disappearing:
+        pickDisappearingMessages();
+      case ChatMenuAction.report:
+        confirmReport();
+      case ChatMenuAction.exportChat:
+        exportChat();
+      case ChatMenuAction.addShortcut:
+        addShortcut();
     }
     return null;
   }
@@ -198,16 +458,31 @@ class ChatController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    messages.assignAll(
-      MockChatMessages.forUser(thread.name).map(
-        (message) => _createMessage(
-          text: message.text,
-          isMine: message.isMine,
-          time: message.time,
+    if (thread.isChannel) {
+      messages.assignAll(
+        MockChannelPosts.forChannel(
+          thread.name,
+          isAdmin: thread.isChannelAdmin,
+        ).map(
+          (message) => _createMessage(
+            text: message.text,
+            isMine: message.isMine,
+            time: message.time,
+          ),
         ),
-      ),
-    );
-    _applyHistoricalTicks();
+      );
+    } else {
+      messages.assignAll(
+        MockChatMessages.forUser(thread.name).map(
+          (message) => _createMessage(
+            text: message.text,
+            isMine: message.isMine,
+            time: message.time,
+          ),
+        ),
+      );
+      _applyHistoricalTicks();
+    }
     if (thread.isGroup) {
       members.assignAll(const [
         'You',
@@ -278,6 +553,7 @@ class ChatController extends GetxController {
   }
 
   void setReply(ChatMessage message) {
+    if (thread.isChannel) return;
     if (!repliesEnabled || message.isSystem || message.isDeleted) return;
     hideEmojiPicker();
     replyTo.value = message;
@@ -303,7 +579,7 @@ class ChatController extends GetxController {
       liveDuration: liveDuration,
       voiceDuration: voiceDuration,
       viewOnce: viewOnce,
-      status: MessageStatus.sent,
+      status: thread.isChannel ? MessageStatus.none : MessageStatus.sent,
       replyToId: reply?.id,
       replyToText: reply?.preview,
       replyToMine: reply?.isMine ?? false,
@@ -313,6 +589,10 @@ class ChatController extends GetxController {
   void _commitOutgoing(ChatMessage message) {
     messages.add(message);
     replyTo.value = null;
+    if (thread.isChannel) {
+      _chats?.updateChannelPreview(thread.name, message.preview);
+      return;
+    }
     _scheduleDelivery(message.id);
     _schedulePeerReply();
   }
@@ -325,7 +605,7 @@ class ChatController extends GetxController {
   }
 
   void _schedulePeerReply() {
-    if (thread.isGroup) return;
+    if (thread.isGroup || thread.isChannel) return;
     _peerTimer?.cancel();
     _peerTimer = Timer(const Duration(milliseconds: 1800), () {
       final text = _peerReplies[_peerReplyIndex++ % _peerReplies.length];
@@ -358,6 +638,7 @@ class ChatController extends GetxController {
   void sendMessage() {
     final text = inputController.text.trim();
     if (text.isEmpty) return;
+    if (thread.isChannel && !thread.isChannelAdmin) return;
     _commitOutgoing(_outgoing(text: text));
     inputController.clear();
     canSend.value = false;
@@ -396,7 +677,7 @@ class ChatController extends GetxController {
   }
 
   void startVoiceRecord(LongPressStartDetails details) {
-    if (canSend.value) return;
+    if (thread.isChannel || canSend.value) return;
     hideEmojiPicker();
     HapticFeedback.lightImpact();
     _recordStart = details.globalPosition;
@@ -559,12 +840,107 @@ class ChatController extends GetxController {
     AppNavigation.push(AppRoutes.userProfile, arguments: thread.name);
   }
 
+  void openChannelInfo() {
+    hideEmojiPicker();
+    if (Get.isRegistered<ChannelInfoController>()) {
+      Get.delete<ChannelInfoController>(force: true);
+    }
+    AppNavigation.push(AppRoutes.channelInfo, arguments: thread.name);
+  }
+
   void toggleMute() {
     isMuted.toggle();
     AppToast.info(
       isMuted.value
           ? 'Muted notifications from ${thread.name}'
           : 'Unmuted ${thread.name}',
+      position: AppToastPosition.top,
+    );
+  }
+
+  void beginSearch() {
+    hideEmojiPicker();
+    isSearching.value = true;
+  }
+
+  void onSearchChanged(String value) => searchQuery.value = value;
+
+  void endSearch() {
+    isSearching.value = false;
+    searchQuery.value = '';
+    searchController.clear();
+  }
+
+  void addToContacts() {
+    isContactSaved.value = true;
+    AppToast.success(
+      '${thread.name} added to contacts',
+      position: AppToastPosition.top,
+    );
+  }
+
+  void toggleChatLock() {
+    isChatLocked.toggle();
+    AppToast.info(
+      isChatLocked.value
+          ? 'Chat lock is on for ${thread.name}'
+          : 'Chat lock is off',
+      position: AppToastPosition.top,
+    );
+  }
+
+  void confirmHideChat() {
+    PremiumConfirmDialog.show(
+      title: 'Hide chat with ${thread.name}?',
+      message:
+          'This chat will be hidden from Chats. You can find it again from the hidden chats lock.',
+      confirmLabel: 'Hide',
+      icon: Icons.visibility_off_outlined,
+      accentColor: AppColors.navy,
+      onConfirm: () {
+        AppToast.info('Chat hidden', position: AppToastPosition.top);
+        AppNavigation.back();
+      },
+    );
+  }
+
+  Future<void> pickDisappearingMessages() async {
+    hideEmojiPicker();
+    await _profile?.pickDisappearingDuration();
+  }
+
+  void confirmReport() {
+    PremiumConfirmDialog.show(
+      title: 'Report ${thread.name}?',
+      message:
+          'The last few messages in this chat will be forwarded to Messanger AX. This person won’t be notified.',
+      confirmLabel: 'Report',
+      icon: Icons.error_outline_rounded,
+      accentColor: AppColors.error,
+      onConfirm: () => AppToast.success(
+        'Reported ${thread.name}',
+        position: AppToastPosition.top,
+      ),
+    );
+  }
+
+  void exportChat() {
+    AppToast.success(
+      'Chat with ${thread.name} exported',
+      position: AppToastPosition.top,
+    );
+  }
+
+  void addShortcut() {
+    AppToast.success(
+      'Shortcut added for ${thread.name}',
+      position: AppToastPosition.top,
+    );
+  }
+
+  void addToChatList(String listName) {
+    AppToast.success(
+      '${thread.name} added to $listName',
       position: AppToastPosition.top,
     );
   }
@@ -736,6 +1112,21 @@ class ChatController extends GetxController {
     );
   }
 
+  void followChannel() {
+    _chats?.followChannel(thread.name);
+  }
+
+  void confirmUnfollow() {
+    PremiumConfirmDialog.show(
+      title: 'Unfollow ${thread.name}?',
+      message: 'You will stop seeing new posts from this channel in Chats.',
+      confirmLabel: 'Unfollow',
+      icon: Icons.campaign_outlined,
+      accentColor: AppColors.error,
+      onConfirm: () => _chats?.unfollowChannel(thread.name),
+    );
+  }
+
   @override
   void onClose() {
     _expiryTimer?.cancel();
@@ -746,13 +1137,15 @@ class ChatController extends GetxController {
     inputFocusNode.removeListener(_onInputFocusChanged);
     inputFocusNode.dispose();
     inputController.dispose();
+    searchController.dispose();
     super.onClose();
   }
 }
 
 class ChatOverflowItem {
-  const ChatOverflowItem(this.action, this.label);
+  const ChatOverflowItem(this.action, this.label, this.icon);
 
   final ChatMenuAction action;
   final String label;
+  final IconData icon;
 }

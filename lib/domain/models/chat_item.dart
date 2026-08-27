@@ -8,6 +8,7 @@ class ChatItem {
     this.unread = 0,
     this.pinned = false,
     this.isGroup = false,
+    this.isChannel = false,
     this.online = false,
     this.status = MessageStatus.none,
     this.highlightTime = false,
@@ -19,6 +20,7 @@ class ChatItem {
   final int unread;
   final bool pinned;
   final bool isGroup;
+  final bool isChannel;
   final bool online;
   final MessageStatus status;
   final bool highlightTime;

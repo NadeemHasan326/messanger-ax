@@ -13,6 +13,20 @@ class NewChatController extends GetxController {
       route: AppRoutes.createGroup,
     ),
     QuickActionItem(
+      label: 'New Channel',
+      subtitle: 'Broadcast updates',
+      icon: Icons.add_to_photos_rounded,
+      color: AppColors.primarySoft,
+      route: AppRoutes.createChannel,
+    ),
+    QuickActionItem(
+      label: 'Find channels',
+      subtitle: 'Follow broadcasts',
+      icon: Icons.campaign_rounded,
+      color: AppColors.avatarTeal,
+      route: AppRoutes.channels,
+    ),
+    QuickActionItem(
       label: 'New Contact',
       subtitle: 'Add someone new',
       icon: Icons.person_add_alt_1_rounded,

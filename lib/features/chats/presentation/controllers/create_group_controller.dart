@@ -24,9 +24,15 @@ class CreateGroupController extends GetxController {
   ];
 
   final groupName = ''.obs;
+  final avatarBytes = Rxn<Uint8List>();
 
   bool get canCreate =>
       groupName.value.isNotEmpty && selectedMembers.length >= 2;
+
+  Future<void> pickAvatar() async {
+    final bytes = await PhotoGallerySheet.pick(title: 'Group photo');
+    if (bytes != null) avatarBytes.value = bytes;
+  }
 
   void onGroupNameChanged(String value) {
     groupName.value = value.trim();

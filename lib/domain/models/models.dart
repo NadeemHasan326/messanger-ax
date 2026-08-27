@@ -2,6 +2,7 @@ export 'call_contact.dart';
 export 'call_item.dart';
 export 'call_session.dart';
 export 'chat_item.dart';
+export 'chat_channel.dart';
 export 'chat_message.dart';
 export 'chat_thread.dart';
 export 'contact_item.dart';

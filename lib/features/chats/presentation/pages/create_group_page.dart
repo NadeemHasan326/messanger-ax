@@ -14,6 +14,16 @@ class CreateGroupPage extends GetView<CreateGroupController> {
           children: [
             const _CreateGroupHeader(),
             Padding(
+              padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 12.h),
+              child: Obx(
+                () => DisplayPicturePicker(
+                  bytes: controller.avatarBytes.value,
+                  placeholderIcon: Icons.groups_rounded,
+                  onTap: controller.pickAvatar,
+                ),
+              ),
+            ),
+            Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.w),
               child: Obx(
                 () => AuthTextField(

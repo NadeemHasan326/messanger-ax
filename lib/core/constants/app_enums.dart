@@ -28,6 +28,19 @@ enum ChatMenuAction {
   sendPermission,
   viewMembers,
   wallpaper,
+  channelInfo,
+  unfollow,
+  addToContacts,
+  search,
+  mediaLinksDocs,
+  chatLock,
+  hideChat,
+  disappearing,
+  more,
+  report,
+  exportChat,
+  addShortcut,
+  addToList,
 }
 
 enum ChatWallpaper {

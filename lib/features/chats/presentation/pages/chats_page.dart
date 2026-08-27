@@ -176,7 +176,9 @@ class ChatsPage extends GetView<ChatsController> {
                     Padding(
                       padding: EdgeInsets.only(top: 48.h),
                       child: Text(
-                        'No chats here yet',
+                        controller.selectedFilter.value == 4
+                            ? 'Follow a channel to see it here'
+                            : 'No chats here yet',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.poppins(
                           fontSize: 13.sp,
@@ -236,6 +238,7 @@ class _ChatTile extends StatelessWidget {
             name: chat.name,
             online: chat.online,
             isGroup: chat.isGroup,
+            isChannel: chat.isChannel,
           ),
           behavior: HitTestBehavior.opaque,
           child: Padding(
@@ -255,15 +258,29 @@ class _ChatTile extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            chat.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.poppins(
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.navy,
-                            ),
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  chat.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.navy,
+                                  ),
+                                ),
+                              ),
+                              if (chat.isChannel) ...[
+                                SizedBox(width: 6.w),
+                                Icon(
+                                  Icons.campaign_rounded,
+                                  size: 14.sp,
+                                  color: AppColors.primary,
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                         Text(

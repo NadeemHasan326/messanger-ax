@@ -12,10 +12,11 @@ class ChatPage extends GetView<ChatController> {
     return Obx(() {
       ThemeController.to.isDark.value;
       final selecting = controller.isSelecting;
+      final searching = controller.isSearching.value;
       return Scaffold(
       backgroundColor: controller.wallpaperColor,
       body: PopScope(
-        canPop: !selecting,
+        canPop: !selecting && !searching,
         onPopInvokedWithResult: (didPop, _) => controller.onPopInvoked(didPop),
         child: SafeArea(
         bottom: Platform.isAndroid ? true : false,
@@ -32,6 +33,37 @@ class ChatPage extends GetView<ChatController> {
               color: AppColors.surface,
               child: Obx(() {
                 final selectedCount = controller.selectedCount;
+                final joinedChannel = controller.isJoinedChannel;
+                final subtitle = controller.headerSubtitle;
+                final searching = controller.isSearching.value;
+                if (searching) {
+                  return Row(
+                    children: [
+                      AppBackButton(onPressed: controller.endSearch),
+                      SizedBox(width: 10.w),
+                      Expanded(
+                        child: TextField(
+                          controller: controller.searchController,
+                          autofocus: true,
+                          onChanged: controller.onSearchChanged,
+                          style: GoogleFonts.poppins(
+                            fontSize: 15.sp,
+                            color: AppColors.navy,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Search...',
+                            hintStyle: GoogleFonts.poppins(
+                              fontSize: 15.sp,
+                              color: AppColors.muted,
+                            ),
+                            border: InputBorder.none,
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
                 if (selectedCount > 0) {
                   return Row(
                     children: [
@@ -62,14 +94,16 @@ class ChatPage extends GetView<ChatController> {
                     child: GestureDetector(
                       onTap: thread.isGroup
                           ? () => _GroupMembersSheet.show(context)
-                          : null,
+                          : thread.isChannel
+                              ? controller.openChannelInfo
+                              : null,
                       behavior: HitTestBehavior.opaque,
                       child: Row(
                         children: [
                           UserAvatar(
                             name: thread.name,
                             size: 40,
-                            showOnline: thread.online,
+                            showOnline: thread.online && !thread.isChannel,
                             onlineIndicatorSize: 10,
                           ),
                           SizedBox(width: 10.w),
@@ -77,36 +111,41 @@ class ChatPage extends GetView<ChatController> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  thread.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16.sp,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.navy,
-                                  ),
-                                ),
-                                if (thread.isGroup)
-                                  Obx(
-                                    () => Text(
-                                      controller.headerSubtitle,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 11.sp,
-                                        color: AppColors.muted,
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        thread.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 16.sp,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.navy,
+                                        ),
                                       ),
                                     ),
-                                  )
-                                else
-                                  Text(
-                                    controller.headerSubtitle,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 11.sp,
-                                      color: thread.online
-                                          ? AppColors.success
-                                          : AppColors.muted,
-                                    ),
+                                    if (thread.isChannel) ...[
+                                      SizedBox(width: 6.w),
+                                      Icon(
+                                        Icons.campaign_rounded,
+                                        size: 16.sp,
+                                        color: AppColors.primary,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                Text(
+                                  subtitle,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11.sp,
+                                    color: thread.isGroup || thread.isChannel
+                                        ? AppColors.muted
+                                        : thread.online
+                                            ? AppColors.success
+                                            : AppColors.muted,
                                   ),
+                                ),
                               ],
                             ),
                           ),
@@ -114,6 +153,33 @@ class ChatPage extends GetView<ChatController> {
                       ),
                     ),
                   ),
+                  if (thread.isChannel &&
+                      !joinedChannel &&
+                      !thread.isChannelAdmin)
+                    Padding(
+                      padding: EdgeInsets.only(right: 8.w),
+                      child: GestureDetector(
+                        onTap: controller.followChannel,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12.w,
+                            vertical: 8.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(20.r),
+                          ),
+                          child: Text(
+                            'Follow',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   if (thread.showCallOption) ...[
                     _HeaderIconButton(
                       icon: Icons.call_rounded,
@@ -133,14 +199,15 @@ class ChatPage extends GetView<ChatController> {
                 decoration: controller.wallpaperDecoration,
                 child: Obx(() {
                 final selectedIds = controller.selectedIds.toList();
+                final visible = controller.visibleMessages;
                 return ListView.builder(
                   padding: EdgeInsets.fromLTRB(0, 8.h, 0, 12.h),
                   reverse: true,
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
-                  itemCount: controller.messages.length,
+                  itemCount: visible.length,
                   itemBuilder: (_, index) {
-                    final message = controller.reversedMessage(index);
+                    final message = visible[visible.length - 1 - index];
                     return _MessageBubble(
                       message: message,
                       selected: selectedIds.contains(message.id),
@@ -176,8 +243,8 @@ class ChatPage extends GetView<ChatController> {
                 ],
               );
             }),
-            const _ChatInputBar(),
-            const _DeviceEmojiPanel(),
+            if (controller.showComposer && !searching) const _ChatInputBar(),
+            if (controller.showComposer && !searching) const _DeviceEmojiPanel(),
           ],
         ),
         ),
@@ -500,16 +567,18 @@ class _ChatInputBar extends GetView<ChatController> {
               ),
             Row(
               children: [
-                _HeaderIconButton(
-                  icon: Icons.attach_file_rounded,
-                  onTap: recording
-                      ? () {}
-                      : () {
-                          controller.prepareAttach();
-                          _ChatAttachSheet.show(context);
-                        },
-                ),
-                SizedBox(width: 8.w),
+                if (!controller.thread.isChannel) ...[
+                  _HeaderIconButton(
+                    icon: Icons.attach_file_rounded,
+                    onTap: recording
+                        ? () {}
+                        : () {
+                            controller.prepareAttach();
+                            _ChatAttachSheet.show(context);
+                          },
+                  ),
+                  SizedBox(width: 8.w),
+                ],
                 Expanded(
                   child: recording
                       ? _RecordingStatus(
@@ -527,7 +596,7 @@ class _ChatInputBar extends GetView<ChatController> {
                             color: AppColors.navy,
                           ),
                           decoration: InputDecoration(
-                            hintText: 'Message...',
+                            hintText: controller.composerHint,
                             hintStyle: GoogleFonts.poppins(
                               fontSize: 13.5.sp,
                               color: AppColors.muted,
@@ -686,30 +755,35 @@ class _SendOrMicButton extends StatelessWidget {
     return Obx(() {
       final enabled = controller.canSend.value;
       final recording = controller.isRecording.value;
+      final channel = controller.thread.isChannel;
       return GestureDetector(
-      onTap: enabled ? controller.sendMessage : null,
-      onLongPressStart: enabled ? null : controller.startVoiceRecord,
-      onLongPressMoveUpdate: enabled ? null : controller.updateVoiceDrag,
-      onLongPressEnd: enabled ? null : controller.endVoiceRecord,
-      onLongPressCancel: enabled ? null : controller.cancelVoiceRecord,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        width: 44.w,
-        height: 44.w,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: enabled || recording ? AppColors.primary : AppColors.surface,
-          border: Border.all(
-            color: enabled || recording ? AppColors.primary : AppColors.divider,
+        onTap: enabled || channel ? controller.sendMessage : null,
+        onLongPressStart:
+            enabled || channel ? null : controller.startVoiceRecord,
+        onLongPressMoveUpdate:
+            enabled || channel ? null : controller.updateVoiceDrag,
+        onLongPressEnd: enabled || channel ? null : controller.endVoiceRecord,
+        onLongPressCancel:
+            enabled || channel ? null : controller.cancelVoiceRecord,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          width: 44.w,
+          height: 44.w,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: enabled || recording ? AppColors.primary : AppColors.surface,
+            border: Border.all(
+              color:
+                  enabled || recording ? AppColors.primary : AppColors.divider,
+            ),
+          ),
+          child: Icon(
+            enabled || channel ? Icons.send_rounded : Icons.mic_rounded,
+            size: 18.sp,
+            color: enabled || recording ? AppColors.white : AppColors.muted,
           ),
         ),
-        child: Icon(
-          enabled ? Icons.send_rounded : Icons.mic_rounded,
-          size: 18.sp,
-          color: enabled || recording ? AppColors.white : AppColors.muted,
-        ),
-      ),
-    );
+      );
     });
   }
 }
@@ -726,6 +800,8 @@ class _ChatMoreButton extends GetView<ChatController> {
       color: AppColors.surface,
       elevation: 10,
       padding: EdgeInsets.zero,
+      menuPadding: EdgeInsets.symmetric(vertical: 6.h),
+      constraints: BoxConstraints(minWidth: 260.w),
       onOpened: controller.hideEmojiPicker,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.r),
@@ -739,13 +815,19 @@ class _ChatMoreButton extends GetView<ChatController> {
             _SendPermissionSheet.show(context);
           case ChatMenuAction.viewMembers:
             _GroupMembersSheet.show(context);
+          case ChatMenuAction.mediaLinksDocs:
+            _ChatMediaSheet.show(context);
+          case ChatMenuAction.more:
+            _ChatMoreOptionsSheet.show(context);
+          case ChatMenuAction.addToList:
+            _ChatAddToListSheet.show(context);
           default:
             break;
         }
       },
       itemBuilder: (_) => [
         for (final item in controller.overflowItems)
-          _menuItem(item.action, item.label),
+          _menuItem(item),
       ],
       child: Container(
         width: 40.w,
@@ -768,19 +850,248 @@ class _ChatMoreButton extends GetView<ChatController> {
     );
   }
 
-  PopupMenuItem<ChatMenuAction> _menuItem(
-    ChatMenuAction value,
-    String label,
-  ) {
+  PopupMenuItem<ChatMenuAction> _menuItem(ChatOverflowItem item) {
     return PopupMenuItem<ChatMenuAction>(
-      value: value,
-      height: 40.h,
-      child: Text(
-        label,
-        style: GoogleFonts.poppins(
-          fontSize: 13.5.sp,
-          fontWeight: FontWeight.w500,
-          color: AppColors.navy,
+      value: item.action,
+      height: 44.h,
+      child: Row(
+        children: [
+          Icon(item.icon, color: AppColors.navy, size: 20.sp),
+          SizedBox(width: 14.w),
+          Expanded(
+            child: Text(
+              item.label,
+              style: GoogleFonts.poppins(
+                fontSize: 13.5.sp,
+                fontWeight: FontWeight.w500,
+                color: AppColors.navy,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChatMoreOptionsSheet extends StatelessWidget {
+  const _ChatMoreOptionsSheet();
+
+  static Future<void> show(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _ChatMoreOptionsSheet(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<ChatController>();
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 12.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
+              ),
+              SizedBox(height: 8.h),
+              for (final item in controller.moreItems)
+                _AttachTile(
+                  icon: item.icon,
+                  label: item.label,
+                  onTap: () {
+                    Navigator.pop(context);
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      final overlay = Get.overlayContext ?? context;
+                      switch (controller.onMenuAction(item.action)) {
+                        case ChatMenuAction.addMembers:
+                          _AddMembersSheet.show(overlay);
+                        case ChatMenuAction.sendPermission:
+                          _SendPermissionSheet.show(overlay);
+                        case ChatMenuAction.addToList:
+                          _ChatAddToListSheet.show(overlay);
+                        default:
+                          break;
+                      }
+                    });
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatMediaSheet extends StatelessWidget {
+  const _ChatMediaSheet();
+
+  static Future<void> show(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => const _ChatMediaSheet(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<ChatController>();
+    final media = controller.mediaMessages;
+    return Container(
+      constraints: BoxConstraints(maxHeight: 0.55.sh),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 12.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
+              ),
+              SizedBox(height: 14.h),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w),
+                  child: Text(
+                    'Media, links, and docs',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.navy,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8.h),
+              if (media.isEmpty)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(8.w, 20.h, 8.w, 24.h),
+                  child: Text(
+                    'No media, links, or docs in this chat yet',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.sp,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                )
+              else
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: media.length,
+                    itemBuilder: (_, index) {
+                      final message = media[index];
+                      return _AttachTile(
+                        icon: message.isAttachment
+                            ? Icons.insert_drive_file_outlined
+                            : Icons.link_rounded,
+                        label: message.preview,
+                        subtitle: message.time,
+                        onTap: () => Navigator.pop(context),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatAddToListSheet extends StatelessWidget {
+  const _ChatAddToListSheet();
+
+  static const _lists = ['Favourites', 'Family', 'Work'];
+
+  static Future<void> show(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _ChatAddToListSheet(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<ChatController>();
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 12.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
+              ),
+              SizedBox(height: 14.h),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w),
+                  child: Text(
+                    'Add to list',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.navy,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8.h),
+              for (final list in _lists)
+                _AttachTile(
+                  icon: Icons.featured_play_list_outlined,
+                  label: list,
+                  onTap: () {
+                    Navigator.pop(context);
+                    controller.addToChatList(list);
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );

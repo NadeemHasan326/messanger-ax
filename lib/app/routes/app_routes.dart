@@ -11,9 +11,12 @@ abstract class AppRoutes {
   static const String newChat = '/new-chat';
   static const String addContact = '/add-contact';
   static const String createGroup = '/create-group';
+  static const String createChannel = '/create-channel';
+  static const String channels = '/channels';
   static const String addStory = '/add-story';
   static const String storyViewer = '/story-viewer';
   static const String userProfile = '/user-profile';
+  static const String channelInfo = '/channel-info';
   static const String chat = '/chat';
   static const String newCall = '/new-call';
   static const String inCall = '/in-call';
