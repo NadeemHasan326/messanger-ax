@@ -6,6 +6,7 @@ abstract final class ChatNavigation {
     required String name,
     bool online = false,
     bool showCallOption = true,
+    bool isGroup = false,
   }) {
     if (Get.isRegistered<ChatController>()) {
       Get.delete<ChatController>(force: true);
@@ -16,6 +17,7 @@ abstract final class ChatNavigation {
         name: name,
         online: online,
         showCallOption: showCallOption,
+        isGroup: isGroup,
       ),
     );
   }

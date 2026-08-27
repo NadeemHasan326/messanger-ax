@@ -1,4 +1,5 @@
 import 'package:messanger_ax/exports.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 class ProfileController extends GetxController {
   final name = 'Nadeem Hasan'.obs;
@@ -8,49 +9,103 @@ class ProfileController extends GetxController {
   final about = 'Hey there! I am using Messanger AX.'.obs;
   final status = 'Available'.obs;
   final notificationsEnabled = true.obs;
+  final disappearingDuration = DisappearingDuration.off.obs;
+  final replyAllowed = true.obs;
+  final screenshotBlocked = false.obs;
+  final screenshotAlerts = true.obs;
+  final chatWallpaper = ChatWallpaper.system.obs;
+  final wallpaperImage = Rxn<Uint8List>();
+  final wallpaperAssets = <AssetEntity>[].obs;
+  final wallpaperGalleryLoading = false.obs;
+  final wallpaperGalleryError = RxnString();
+  final readReceipts = true.obs;
 
-  final menu = const [
-    ProfileMenuItem(
+  @override
+  void onInit() {
+    super.onInit();
+    ScreenCapture.listen(_onScreenshot);
+    ScreenCapture.setBlocked(screenshotBlocked.value);
+    ever(screenshotBlocked, (blocked) {
+      ScreenCapture.setBlocked(blocked);
+    });
+  }
+
+  @override
+  void onClose() {
+    ScreenCapture.stopListening();
+    super.onClose();
+  }
+
+  void _onScreenshot() {
+    if (!screenshotAlerts.value) return;
+    if (Get.isRegistered<ChatController>()) {
+      Get.find<ChatController>().onScreenshotTaken();
+      return;
+    }
+    if (Get.isRegistered<StoryViewerController>()) {
+      AppToast.warning(
+        'A screenshot was taken of this status',
+        position: AppToastPosition.top,
+      );
+      return;
+    }
+    AppToast.warning('Screenshot taken');
+  }
+
+  List<ProfileMenuItem> get menu => [
+    const ProfileMenuItem(
       icon: Icons.person_outline_rounded,
       title: 'Account',
       subtitle: 'Profile, phone, email',
       route: AppRoutes.account,
     ),
-    ProfileMenuItem(
+    const ProfileMenuItem(
       icon: Icons.lock_outline_rounded,
       title: 'Privacy & Security',
       subtitle: 'Blocked contacts, 2FA',
       route: AppRoutes.privacySecurity,
     ),
     ProfileMenuItem(
+      icon: Icons.timer_outlined,
+      title: 'Disappearing messages',
+      subtitle: disappearingDuration.value == DisappearingDuration.off
+          ? 'Off · 24 hours, 7 days, and more'
+          : 'New messages vanish after ${disappearingDuration.value.label}',
+    ),
+    const ProfileMenuItem(
       icon: Icons.palette_outlined,
       title: 'Appearance',
       subtitle: 'Light and dark theme',
       showThemeToggle: true,
     ),
     ProfileMenuItem(
+      icon: Icons.wallpaper_rounded,
+      title: 'Chat wallpaper',
+      subtitle: wallpaperSubtitle,
+    ),
+    const ProfileMenuItem(
       icon: Icons.notifications_none_rounded,
       title: 'Notifications',
       subtitle: 'Message & call alerts',
       showNotificationToggle: true,
     ),
-    ProfileMenuItem(
+    const ProfileMenuItem(
       icon: Icons.chat_bubble_outline_rounded,
       title: 'Contact us',
       subtitle: 'Chat with the Messanger AX team',
     ),
-    ProfileMenuItem(
+    const ProfileMenuItem(
       icon: Icons.person_add_alt_1_outlined,
       title: 'Invite Friends',
       subtitle: 'Share Messanger AX',
       route: AppRoutes.inviteFriends,
     ),
-    ProfileMenuItem(
+    const ProfileMenuItem(
       icon: Icons.description_outlined,
       title: 'Terms of Service',
       subtitle: 'Rules and conditions of use',
     ),
-    ProfileMenuItem(
+    const ProfileMenuItem(
       icon: Icons.privacy_tip_outlined,
       title: 'Privacy Policy',
       subtitle: 'How we handle your data',
@@ -60,6 +115,12 @@ class ProfileController extends GetxController {
   void openMenu(ProfileMenuItem item) {
     if (item.showThemeToggle || item.showNotificationToggle) return;
     switch (item.title) {
+      case 'Disappearing messages':
+        pickDisappearingDuration();
+        return;
+      case 'Chat wallpaper':
+        pickChatWallpaper();
+        return;
       case 'Contact us':
         contactUs();
         return;
@@ -77,6 +138,105 @@ class ProfileController extends GetxController {
   void toggleNotifications() {
     notificationsEnabled.toggle();
   }
+
+  Future<void> pickDisappearingDuration() async {
+    final selected = await SettingsOptionSheet.show(
+      title: 'Disappearing messages',
+      options: DisappearingDuration.values.map((d) => d.label).toList(),
+      selected: disappearingDuration.value.label,
+    );
+    if (selected == null) return;
+    disappearingDuration.value = DisappearingDuration.values.firstWhere(
+      (d) => d.label == selected,
+    );
+  }
+
+  String get wallpaperSubtitle {
+    if (chatWallpaper.value == ChatWallpaper.gallery &&
+        wallpaperImage.value != null) {
+      return 'Photo from gallery';
+    }
+    return chatWallpaper.value.label;
+  }
+
+  Future<void> pickChatWallpaper() async {
+    final selected = await SettingsOptionSheet.show(
+      title: 'Chat wallpaper',
+      options: ChatWallpaper.values.map((w) => w.label).toList(),
+      selected: chatWallpaper.value.label,
+    );
+    if (selected == null) return;
+    if (selected == ChatWallpaper.gallery.label) {
+      await pickGalleryWallpaper();
+      return;
+    }
+    chatWallpaper.value = ChatWallpaper.values.firstWhere(
+      (w) => w.label == selected,
+    );
+    wallpaperImage.value = null;
+  }
+
+  Future<void> pickGalleryWallpaper() async {
+    await loadWallpaperGallery();
+    await WallpaperGallerySheet.show();
+  }
+
+  Future<void> loadWallpaperGallery() async {
+    wallpaperGalleryLoading.value = true;
+    wallpaperGalleryError.value = null;
+    wallpaperAssets.clear();
+    try {
+      final permission = await PhotoManager.requestPermissionExtend();
+      if (!permission.isAuth) {
+        wallpaperGalleryError.value =
+            'Photo access is required to choose a chat wallpaper.';
+        return;
+      }
+      final paths = await PhotoManager.getAssetPathList(
+        type: RequestType.image,
+        onlyAll: true,
+      );
+      if (paths.isEmpty) return;
+      final assets = await paths.first.getAssetListPaged(page: 0, size: 120);
+      wallpaperAssets.assignAll(assets);
+    } on MissingPluginException {
+      wallpaperGalleryError.value =
+          'Gallery is not ready yet. Restart the app and try again.';
+    } catch (_) {
+      wallpaperGalleryError.value = 'Could not load photos from your gallery.';
+    } finally {
+      wallpaperGalleryLoading.value = false;
+    }
+  }
+
+  Future<void> applyWallpaperAsset(AssetEntity asset) async {
+    try {
+      final bytes = await asset.thumbnailDataWithSize(
+        const ThumbnailSize(1600, 1600),
+      );
+      if (bytes == null || bytes.isEmpty) {
+        AppToast.error('Could not load that photo');
+        return;
+      }
+      wallpaperImage.value = bytes;
+      chatWallpaper.value = ChatWallpaper.gallery;
+      wallpaperAssets.clear();
+      Get.back();
+    } catch (_) {
+      AppToast.error('Could not use that photo');
+    }
+  }
+
+  void setReplyAllowed(bool value) => replyAllowed.value = value;
+
+  void setScreenshotBlocked(bool value) {
+    screenshotBlocked.value = value;
+    AppToast.info(
+      value ? 'Screenshots are blocked' : 'Screenshots are allowed',
+    );
+  }
+
+  void setScreenshotAlerts(bool value) => screenshotAlerts.value = value;
 
   void contactUs() {
     ChatNavigation.open(

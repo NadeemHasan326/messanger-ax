@@ -8,6 +8,12 @@ class MainController extends GetxController {
 
   int entranceOf(int tabIndex) => entranceTokens[tabIndex];
 
+  @override
+  void onInit() {
+    super.onInit();
+    Get.find<ProfileController>();
+  }
+
   void changeTab(int index) {
     if (index < 0 || index >= entranceTokens.length) return;
     if (currentIndex.value != index) {

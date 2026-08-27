@@ -124,10 +124,15 @@ class ProfilePage extends GetView<ProfileController> {
               child: ListView(
                 padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 24.h),
                 children: [
-                  ...controller.menu.map(
-                    (item) => _MenuTile(
-                      item: item,
-                      onTap: () => controller.openMenu(item),
+                  Obx(
+                    () => Column(
+                      children: [
+                        for (final item in controller.menu)
+                          _MenuTile(
+                            item: item,
+                            onTap: () => controller.openMenu(item),
+                          ),
+                      ],
                     ),
                   ),
                   SizedBox(height: 8.h),

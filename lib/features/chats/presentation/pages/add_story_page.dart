@@ -106,6 +106,31 @@ class AddStoryPage extends GetView<AddStoryController> {
                           SizedBox(height: 12.h),
                           _SelectedContactsSection(),
                         ],
+                        SizedBox(height: 16.h),
+                        Obx(() {
+                          return SettingsGroupCard(
+                            title: 'Screenshots',
+                            children: [
+                              SettingsListTile(
+                                title: 'Prevent screenshots',
+                                subtitle: 'Block captures of this status',
+                                switchValue:
+                                    controller.screenshotBlocked.value,
+                                onSwitchChanged:
+                                    controller.setScreenshotBlocked,
+                              ),
+                              SettingsListTile(
+                                title: 'Screenshot alerts',
+                                subtitle:
+                                    'Notify when someone takes a screenshot',
+                                switchValue:
+                                    controller.screenshotAlerts.value,
+                                onSwitchChanged:
+                                    controller.setScreenshotAlerts,
+                              ),
+                            ],
+                          );
+                        }),
                       ] else
                         Text(
                           'Select a status type above to get started',

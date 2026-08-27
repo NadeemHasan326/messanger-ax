@@ -14,7 +14,6 @@ class PrivacySecurityController extends GetxController {
   final profilePhoto = 'Everyone'.obs;
   final aboutVisibility = 'My contacts'.obs;
   final statusVisibility = 'My contacts'.obs;
-  final readReceipts = true.obs;
   final twoStepVerification = false.obs;
   final screenLock = false.obs;
   final loginAlerts = true.obs;
@@ -33,7 +32,38 @@ class PrivacySecurityController extends GetxController {
     if (selected != null) value.value = selected;
   }
 
-  void toggleReadReceipts(bool value) => readReceipts.value = value;
+  ProfileController get _profile => Get.find<ProfileController>();
+
+  Rx<DisappearingDuration> get disappearingDuration =>
+      _profile.disappearingDuration;
+
+  Future<void> pickDisappearingDuration() =>
+      _profile.pickDisappearingDuration();
+
+  String get disappearingLabel => disappearingDuration.value.label;
+
+  String get disappearingSubtitle =>
+      disappearingDuration.value == DisappearingDuration.off
+          ? 'New messages stay until you delete them'
+          : 'New messages vanish after ${disappearingDuration.value.label}';
+
+  RxBool get replyAllowed => _profile.replyAllowed;
+
+  void toggleReplies(bool value) => _profile.setReplyAllowed(value);
+
+  RxBool get screenshotBlocked => _profile.screenshotBlocked;
+
+  void toggleScreenshotBlocked(bool value) =>
+      _profile.setScreenshotBlocked(value);
+
+  RxBool get screenshotAlerts => _profile.screenshotAlerts;
+
+  void toggleScreenshotAlerts(bool value) =>
+      _profile.setScreenshotAlerts(value);
+
+  RxBool get readReceipts => _profile.readReceipts;
+
+  void toggleReadReceipts(bool value) => _profile.readReceipts.value = value;
 
   void toggleTwoStep(bool value) {
     twoStepVerification.value = value;

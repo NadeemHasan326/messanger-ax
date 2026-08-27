@@ -156,6 +156,18 @@ class AddStoryController extends GetxController {
     };
   }
 
+  ProfileController get _profile => Get.find<ProfileController>();
+
+  RxBool get screenshotBlocked => _profile.screenshotBlocked;
+
+  RxBool get screenshotAlerts => _profile.screenshotAlerts;
+
+  void setScreenshotBlocked(bool value) =>
+      _profile.setScreenshotBlocked(value);
+
+  void setScreenshotAlerts(bool value) =>
+      _profile.setScreenshotAlerts(value);
+
   void setPrivacy(StoryPrivacy value) {
     privacy.value = value;
     if (value != StoryPrivacy.selected) {

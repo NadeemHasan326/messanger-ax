@@ -64,6 +64,18 @@ class PrivacySecurityPage extends GetView<PrivacySecurityController> {
                       title: 'Messages',
                       children: [
                         SettingsListTile(
+                          title: 'Disappearing messages',
+                          subtitle: controller.disappearingSubtitle,
+                          trailingText: controller.disappearingLabel,
+                          onTap: controller.pickDisappearingDuration,
+                        ),
+                        SettingsListTile(
+                          title: 'Allow replies',
+                          subtitle: 'Swipe a message to reply',
+                          switchValue: controller.replyAllowed.value,
+                          onSwitchChanged: controller.toggleReplies,
+                        ),
+                        SettingsListTile(
                           title: 'Read receipts',
                           subtitle: 'If off, you won’t send or see read ticks',
                           switchValue: controller.readReceipts.value,
@@ -77,6 +89,18 @@ class PrivacySecurityPage extends GetView<PrivacySecurityController> {
                     () => SettingsGroupCard(
                       title: 'Security',
                       children: [
+                        SettingsListTile(
+                          title: 'Prevent screenshots',
+                          subtitle: 'Block captures in chats, profile, and status',
+                          switchValue: controller.screenshotBlocked.value,
+                          onSwitchChanged: controller.toggleScreenshotBlocked,
+                        ),
+                        SettingsListTile(
+                          title: 'Screenshot alerts',
+                          subtitle: 'Notify when a screenshot is taken',
+                          switchValue: controller.screenshotAlerts.value,
+                          onSwitchChanged: controller.toggleScreenshotAlerts,
+                        ),
                         SettingsListTile(
                           title: 'Two-step verification',
                           subtitle: 'PIN required when registering your number',

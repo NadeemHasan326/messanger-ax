@@ -3,12 +3,15 @@ import 'package:messanger_ax/exports.dart';
 class ChatsController extends GetxController {
   final selectedFilter = 0.obs;
 
-  final filters = const [
-    FilterChipData('All', icon: Icons.chat_bubble_rounded),
-    FilterChipData('Unread', badge: 2),
-    FilterChipData('Pinned', icon: Icons.push_pin_rounded),
-    FilterChipData('Groups', icon: Icons.people_alt_rounded),
-  ];
+  List<FilterChipData> get filters => [
+        const FilterChipData('All', icon: Icons.chat_bubble_rounded),
+        FilterChipData(
+          'Unread',
+          badge: unreadChatCount > 0 ? unreadChatCount : null,
+        ),
+        const FilterChipData('Pinned', icon: Icons.push_pin_rounded),
+        const FilterChipData('Groups', icon: Icons.people_alt_rounded),
+      ];
 
   final statuses = <StatusItem>[
     const StatusItem(name: 'My status', isMine: true),
@@ -96,6 +99,7 @@ class ChatsController extends GetxController {
       time: 'Yesterday',
       pinned: true,
       unread: 3,
+      isGroup: true,
       status: MessageStatus.read,
       highlightTime: true,
     ),
@@ -104,6 +108,7 @@ class ChatsController extends GetxController {
       message: 'Standup moved to 11:30',
       time: '10:30 AM',
       pinned: true,
+      isGroup: true,
       status: MessageStatus.delivered,
     ),
   ];
@@ -137,6 +142,39 @@ class ChatsController extends GetxController {
       status: MessageStatus.sent,
     ),
   ];
+
+  List<ChatItem> get _everyChat => [...pinnedChats, ...allChats];
+
+  int get unreadChatCount =>
+      _everyChat.where((chat) => chat.unread > 0).length;
+
+  bool get showPinnedSection => selectedFilter.value == 0;
+
+  String get sectionTitle {
+    switch (selectedFilter.value) {
+      case 1:
+        return 'UNREAD';
+      case 2:
+        return 'PINNED';
+      case 3:
+        return 'GROUPS';
+      default:
+        return 'ALL CHATS';
+    }
+  }
+
+  List<ChatItem> get visibleChats {
+    switch (selectedFilter.value) {
+      case 1:
+        return _everyChat.where((chat) => chat.unread > 0).toList();
+      case 2:
+        return _everyChat.where((chat) => chat.pinned).toList();
+      case 3:
+        return _everyChat.where((chat) => chat.isGroup).toList();
+      default:
+        return allChats;
+    }
+  }
 
   void selectFilter(int index) => selectedFilter.value = index;
 }

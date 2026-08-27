@@ -60,7 +60,7 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Messanger AX needs access to your photos so you can choose images for your status.</string>
+	<string>Messanger AX needs access to your photos so you can choose images for status and chat wallpaper.</string>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

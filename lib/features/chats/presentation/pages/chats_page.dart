@@ -156,22 +156,43 @@ class ChatsPage extends GetView<ChatsController> {
                   ),
                 ],
               ),
-              child: ListView(
+              child: Obx(() {
+                final pinned = controller.pinnedChats;
+                final chats = controller.visibleChats;
+                final showPinned = controller.showPinnedSection;
+                return ListView(
                 padding: EdgeInsets.fromLTRB(20.w, 18.h, 20.w, 24.h),
                 children: [
-                  const _SectionLabel(title: 'PINNED'),
-                  ...controller.pinnedChats.map(
-                    (chat) => _ChatTile(chat, showDivider: true),
-                  ),
-                  SizedBox(height: 10.h),
-                  const _SectionLabel(title: 'ALL CHATS'),
-                  ...List.generate(controller.allChats.length, (index) {
-                    final chat = controller.allChats[index];
-                    final isLast = index == controller.allChats.length - 1;
-                    return _ChatTile(chat, showDivider: !isLast);
-                  }),
+                  if (showPinned) ...[
+                    const _SectionLabel(title: 'PINNED'),
+                    ...pinned.map(
+                      (chat) => _ChatTile(chat, showDivider: true),
+                    ),
+                    SizedBox(height: 10.h),
+                    const _SectionLabel(title: 'ALL CHATS'),
+                  ] else if (chats.isNotEmpty)
+                    _SectionLabel(title: controller.sectionTitle),
+                  if (chats.isEmpty)
+                    Padding(
+                      padding: EdgeInsets.only(top: 48.h),
+                      child: Text(
+                        'No chats here yet',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.sp,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                    )
+                  else
+                    ...List.generate(chats.length, (index) {
+                      final chat = chats[index];
+                      final isLast = index == chats.length - 1;
+                      return _ChatTile(chat, showDivider: !isLast);
+                    }),
                 ],
-              ),
+              );
+              }),
             ),
             ),
           ),
@@ -214,6 +235,7 @@ class _ChatTile extends StatelessWidget {
           onTap: () => ChatNavigation.open(
             name: chat.name,
             online: chat.online,
+            isGroup: chat.isGroup,
           ),
           behavior: HitTestBehavior.opaque,
           child: Padding(
